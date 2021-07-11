@@ -133,8 +133,6 @@ check_http_code() {
 parse_args "$@"
 process_args
 
-rm -f posts.json
-
 debug_print "DIRECTORY: $DL_DIR, FREQUENCY: $FREQUENCY, SUBREDDIT: $SUBREDDIT, VERBOSE: $VERBOSE"
 
 # needs to be passed otherwise reddit blocks requests
@@ -194,3 +192,5 @@ if [ -n "$error_urls" ]; then
     echo "Following images could not be downloaded"
     echo "$error_urls"
 fi
+
+rm -f posts.json
