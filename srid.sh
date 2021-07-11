@@ -192,7 +192,6 @@ download_images(){
     frequency=$2
     subreddit=$3
     ## number of characters for progress bar in the terminal
-    progress_bar_width=$(($(tput cols)-10))
     frequency_string=$(get_frequency_string "$frequency")
 
     debug_print "DIRECTORY: $directory, frequency: $frequency, subreddit: $subreddit, VERBOSE: $VERBOSE"
