@@ -2,13 +2,13 @@
 
 SUBREDDIT=$1
 DL_FOLDER=$2
+TIME=$3
 
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 3 ]; then
     echo "Execute as ./srid.sh <subreddit> <dl-folder>"
     exit 1
 fi
 
-TIME=month
 FAKE_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
 TOP_URL="https://www.reddit.com/r/$SUBREDDIT/top.json?limit=100&t=$TIME"
