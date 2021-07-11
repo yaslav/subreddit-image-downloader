@@ -1,12 +1,16 @@
 #!/bin/sh
 
 # Global variables
+## parameters
 VERBOSE=false
 SUBREDDIT=""
 DL_DIR=""
 FREQUENCY=""
-FREQUENCY_STRING=""
+## number of characters for progress bar in the terminal
 PROGRESS_BAR_WIDTH=90
+## user agent for curl of reddit json api
+## needs to be passed otherwise reddit blocks requests
+FAKE_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
 
 create_progress_bar() { 
@@ -100,16 +104,24 @@ process_args() {
     if [ -z "$FREQUENCY" ]; then
         echo "Frequency not provided, setting to month"
         FREQUENCY=month
+    elif [ "$FREQUENCY" != "day" ] && [ "$FREQUENCY" != "week" ]  && [ "$FREQUENCY" != "month" ] && [ "$FREQUENCY" != "year" ] && [ "$FREQUENCY" != "all" ]; then
+       echo "Error: Invalid frequency $FREQUENCY provided. Either leave parameter -f|--frequency empty or set to day|week|month|year|all"
+       exit 1 
     fi
+}
 
+get_frequency_string(){
+    frequency=$1
+    frequency_string=""
     case "$FREQUENCY" in
-    day)   FREQUENCY=day; FREQUENCY_STRING="today";;
-    week)   FREQUENCY=week; FREQUENCY_STRING="the week";;
-    month)   FREQUENCY=month; FREQUENCY_STRING="the month";;
-    year)   FREQUENCY=year; FREQUENCY_STRING="the year";;
-    all)   FREQUENCY=all; FREQUENCY_STRING="all time";;
-    *)   echo "Error: Invalid frequency $FREQUENCY provided. Either leave parameter -f|--frequency empty or set to day|week|month|year|all"; exit 1 ;;
+        day)    frequency_string="today";;
+        week)   frequency_string="the week";;
+        month)  frequency_string="the month";;
+        year)   frequency_string="the year";;
+        all)    frequency_string="all time";;
+        *)   echo "Error: Invalid frequency $FREQUENCY provided. Either leave parameter -f|--frequency empty or set to day|week|month|year|all"; exit 1 ;;
     esac
+    echo "$frequency_string"
 }
 
 debug_print() {
@@ -130,67 +142,74 @@ check_http_code() {
     fi
 }
 
+
+download_images(){
+    dl_dir=$1
+    frequency=$2
+    subreddit=$3
+    frequency_string=$(get_frequency_string "$frequency")
+
+    debug_print "DIRECTORY: $dl_dir, frequency: $frequency, subreddit: $subreddit, VERBOSE: $VERBOSE"
+
+    top_url="https://www.reddit.com/r/$subreddit/top.json?limit=100&t=$frequency"
+
+    debug_print "Attempting to download JSON metadata from /r/$subreddit"
+
+    http_code=$(curl -A "$FAKE_USER_AGENT" -s -w "%{http_code}" "$top_url" -o posts.json)
+    check_http_code "$http_code"
+
+    number_images=$(jq -r '[.data.children | .[].data | select(.post_hint=="image")] | length' posts.json)
+    urls=$(jq -r '.data.children | .[].data | select(.post_hint=="image") | .url' posts.json)
+
+    if [ ! -d "$dl_dir" ]; then
+        debug_print "$dl_dir does not exist, creating"
+        mkdir "$dl_dir"
+    fi
+
+    dl_folder_abs=$(realpath "$dl_dir")
+
+    echo "Downloading top $number_images images of $frequency_string from /r/$subreddit"
+
+    downloaded=0
+    skipped=0
+    errors=0
+    image_index=0
+    error_urls=""
+
+    for url in $urls; do
+        image_index=$((image_index+1))
+        $VERBOSE || progress_print $image_index $number_images $PROGRESS_BAR_WIDTH
+        filename=$(basename "$url")
+        filename_abs="$dl_folder_abs/$filename"
+        if [ ! -f "$filename_abs" ]; then
+            debug_print "Downloading $filename from $url"
+            curl "$url" -s -o "$filename_abs"
+            if file "$filename_abs" | grep empty > /dev/null; then
+                debug_print "Error downloading file $url"
+                rm "$filename_abs"
+                errors=$((errors+1))
+                error_urls="$error_urls    $url\n"
+            else
+                downloaded=$((downloaded+1))
+            fi
+        else
+            debug_print "File $filename exists under $filename_abs, skipping"
+            skipped=$((skipped+1))
+        fi
+    done
+
+    echo ""
+    echo ""
+    echo "Finished. Total: $total,  downloaded: $downloaded, skipped: $skipped, errors: $errors"
+    if [ -n "$error_urls" ]; then
+        echo "Following images could not be downloaded"
+        echo "$error_urls"
+    fi
+
+    rm -f posts.json
+}
+
 parse_args "$@"
 process_args
 
-debug_print "DIRECTORY: $DL_DIR, FREQUENCY: $FREQUENCY, SUBREDDIT: $SUBREDDIT, VERBOSE: $VERBOSE"
-
-# needs to be passed otherwise reddit blocks requests
-fake_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-
-top_url="https://www.reddit.com/r/$SUBREDDIT/top.json?limit=100&t=$FREQUENCY"
-
-debug_print "Attempting to download JSON metadata from /r/$SUBREDDIT"
-
-http_code=$(curl -A "$fake_user_agent" -s -w "%{http_code}" "$top_url" -o posts.json)
-check_http_code "$http_code"
-
-number_images=$(jq -r '[.data.children | .[].data | select(.post_hint=="image")] | length' posts.json)
-urls=$(jq -r '.data.children | .[].data | select(.post_hint=="image") | .url' posts.json)
-
-if [ ! -d "$DL_DIR" ]; then
-    debug_print "$DL_DIR does not exist, creating"
-    mkdir "$DL_DIR"
-fi
-
-dl_folder_abs=$(realpath "$DL_DIR")
-
-echo "Downloading top $number_images images of $FREQUENCY_STRING from /r/$SUBREDDIT"
-
-downloaded=0
-skipped=0
-errors=0
-image_index=0
-error_urls=""
-
-for url in $urls; do
-    image_index=$((image_index+1))
-    $VERBOSE || progress_print $image_index $number_images $PROGRESS_BAR_WIDTH
-    filename=$(basename "$url")
-    filename_abs="$dl_folder_abs/$filename"
-    if [ ! -f "$filename_abs" ]; then
-        debug_print "Downloading $filename from $url"
-        curl "$url" -s -o "$filename_abs"
-        if file "$filename_abs" | grep empty > /dev/null; then
-            debug_print "Error downloading file $url"
-            rm "$filename_abs"
-	        errors=$((errors+1))
-            error_urls="$error_urls    $url\n"
-        else
-            downloaded=$((downloaded+1))
-        fi
-    else
-        debug_print "File $filename exists under $filename_abs, skipping"
-        skipped=$((skipped+1))
-    fi
-done
-
-echo ""
-echo ""
-echo "Finished. Total: $total,  downloaded: $downloaded, skipped: $skipped, errors: $errors"
-if [ -n "$error_urls" ]; then
-    echo "Following images could not be downloaded"
-    echo "$error_urls"
-fi
-
-rm -f posts.json
+download_images "$DL_DIR" "$FREQUENCY" "$SUBREDDIT"
