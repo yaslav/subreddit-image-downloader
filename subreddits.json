@@ -1,13 +1,13 @@
 [
 	{
-		"subreddit": "pics",
-		"frequency": "month",
-		"directory": "$HOME/Bilder/pics"
+		"subreddit": ["pics", "thinkpad"],
+		"frequency": ["month"],
+		"directory": ["$HOME/Bilder/pics"]
 	},
 	{
-		"subreddit": "thinkpad",
-		"frequency": "month",
-		"directory": "$HOME/Bilder/thinkpad"
+		"subreddit": ["aww"],
+		"frequency": ["month", "week"],
+		"directory": ["$HOME/Bilder/aww"]
 	}
 
 ]

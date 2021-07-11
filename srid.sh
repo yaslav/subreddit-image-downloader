@@ -136,9 +136,9 @@ check_json() {
         exit 1
     fi
     for entry in $(seq 0 $((number_entries-1))); do
-        subreddit=$(jq -r ".[$entry].subreddit" "$JSON_FILE")
-        frequency=$(jq -r ".[$entry].frequency" "$JSON_FILE")
-        directory=$(jq -r ".[$entry].directory" "$JSON_FILE")
+        subreddit=$(jq -r ".[$entry].subreddit | .[]" "$JSON_FILE")
+        frequency=$(jq -r ".[$entry].frequency | .[]" "$JSON_FILE")
+        directory=$(jq -r ".[$entry].directory | .[]" "$JSON_FILE")
         if [ "$subreddit" = "null" ]; then
             echo "Missing or invalid 'subreddit' variable in entry #$entry in $JSON_FILE"
             exit 1
@@ -264,10 +264,17 @@ else
     check_json
     number_entries=$(jq ". | length" "$JSON_FILE")
     for entry in $(seq 0 $((number_entries-1))); do
-        subreddit=$(jq -r ".[$entry].subreddit" "$JSON_FILE")
-        frequency=$(jq -r ".[$entry].frequency" "$JSON_FILE")
-        directory=$(eval echo $(jq -r ".[$entry].directory" "$JSON_FILE"))
-        download_images "$directory" "$frequency" "$subreddit"
+        subreddits=$(jq -r ".[$entry].subreddit | .[]" "$JSON_FILE")
+        frequencies=$(jq -r ".[$entry].frequency | .[]" "$JSON_FILE")
+        directories=$(eval echo $(jq -r ".[$entry].directory | .[]" "$JSON_FILE"))
+        for subreddit in $subreddits; do
+            for frequency in $frequencies; do
+                for directory in $directories; do
+                    download_images "$directory" "$frequency" "$subreddit"
+                done
+            done
+        done
+
     done
 fi
 
