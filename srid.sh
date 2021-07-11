@@ -6,6 +6,44 @@ SUBREDDIT=""
 DL_DIR=""
 FREQUENCY=""
 FREQUENCY_STRING=""
+PROGRESS_BAR_WIDTH=90
+
+
+create_progress_bar() { 
+    progress=$1 
+    total=$2 
+    scaled_progress=$3 
+    max_width=$4 
+    progress_bar="" 
+
+    for i in $(seq 1 "$scaled_progress"); do 
+        progress_bar="$progress_bar#" 
+    done 
+
+    for i in $(seq $((scaled_progress+1)) "$max_width"); do 
+        progress_bar="$progress_bar." 
+    done 
+
+    progress_bar="$progress_bar [$progress/$total]" 
+    printf "\r%s" "$progress_bar" 
+} 
+ 
+progress_print(){ 
+    progress=$1 
+    total_amount=$2 
+    max_width=$3 
+    scaled_progress=$(echo "$max_width/$total_amount*$progress" | bc -l)
+
+    # rounding up floating points
+    # is there a cleaner way to do this?
+    case $scaled_progress in 
+        *"."*)
+            scaled_progress=$(echo "scale=0; ($scaled_progress + 1)/1" | bc)
+            ;;
+    esac
+
+    create_progress_bar "$progress" "$total_amount" "$scaled_progress" "$max_width" 
+}
 
 help() {
     echo "Subreddit Image Downloader"
@@ -124,10 +162,12 @@ echo "Downloading top $number_images images of $FREQUENCY_STRING from /r/$SUBRED
 downloaded=0
 skipped=0
 errors=0
-total=0
+image_index=0
+error_urls=""
 
 for url in $urls; do
-    total=$((total+1))
+    image_index=$((image_index+1))
+    $VERBOSE || progress_print $image_index $number_images $PROGRESS_BAR_WIDTH
     filename=$(basename "$url")
     filename_abs="$dl_folder_abs/$filename"
     if [ ! -f "$filename_abs" ]; then
@@ -136,9 +176,10 @@ for url in $urls; do
         if file "$filename_abs" | grep empty > /dev/null; then
             debug_print "Error downloading file $url"
             rm "$filename_abs"
-	    errors=$((errors+1))
-	else
-	    downloaded=$((downloaded+1))
+	        errors=$((errors+1))
+            error_urls="$error_urls    $url\n"
+        else
+            downloaded=$((downloaded+1))
         fi
     else
         debug_print "File $filename exists under $filename_abs, skipping"
@@ -146,4 +187,10 @@ for url in $urls; do
     fi
 done
 
+echo ""
+echo ""
 echo "Finished. Total: $total,  downloaded: $downloaded, skipped: $skipped, errors: $errors"
+if [ -n "$error_urls" ]; then
+    echo "Following images could not be downloaded"
+    echo "$error_urls"
+fi
