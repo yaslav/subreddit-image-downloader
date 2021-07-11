@@ -1,0 +1,14 @@
+[
+	{
+		"subreddit": "pics",
+		"frequency": "month",
+		"directory": "$HOME/Bilder/pics"
+	},
+	{
+		"subreddit": "thinkpad",
+		"frequency": "month",
+		"directory": "$HOME/Bilder/thinkpad"
+	}
+
+]
+
