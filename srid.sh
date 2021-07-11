@@ -20,11 +20,11 @@ create_progress_bar() {
     max_width=$4 
     progress_bar="" 
 
-    for i in $(seq 1 "$scaled_progress"); do 
+    for _ in $(seq 1 "$scaled_progress"); do 
         progress_bar="$progress_bar#" 
     done 
 
-    for i in $(seq $((scaled_progress+1)) "$max_width"); do 
+    for _ in $(seq $((scaled_progress+1)) "$max_width"); do 
         progress_bar="$progress_bar." 
     done 
 
@@ -104,7 +104,9 @@ process_args() {
     if [ -z "$FREQUENCY" ]; then
         echo "Frequency not provided, setting to month"
         FREQUENCY=month
-    elif [ "$FREQUENCY" != "day" ] && [ "$FREQUENCY" != "week" ]  && [ "$FREQUENCY" != "month" ] && [ "$FREQUENCY" != "year" ] && [ "$FREQUENCY" != "all" ]; then
+    elif [ "$FREQUENCY" != "day" ] && [ "$FREQUENCY" != "week" ]  && 
+         [ "$FREQUENCY" != "month" ] && [ "$FREQUENCY" != "year" ] && 
+         [ "$FREQUENCY" != "all" ]; then
        echo "Error: Invalid frequency $FREQUENCY provided. Either leave parameter -f|--frequency empty or set to day|week|month|year|all"
        exit 1 
     fi
