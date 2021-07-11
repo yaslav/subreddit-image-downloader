@@ -7,8 +7,7 @@ SUBREDDIT=""
 DL_DIR=""
 FREQUENCY=""
 JSON_FILE=""
-## number of characters for progress bar in the terminal
-PROGRESS_BAR_WIDTH=90
+
 ## user agent for curl of reddit json api
 ## needs to be passed otherwise reddit blocks requests
 FAKE_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -36,7 +35,7 @@ create_progress_bar() {
 progress_print(){ 
     progress=$1 
     total_amount=$2 
-    max_width=$3 
+    max_width=$(($(tput cols)-10))
     scaled_progress=$(echo "$max_width/$total_amount*$progress" | bc -l)
 
     # rounding up floating points
@@ -192,6 +191,8 @@ download_images(){
     directory=$1
     frequency=$2
     subreddit=$3
+    ## number of characters for progress bar in the terminal
+    progress_bar_width=$(($(tput cols)-10))
     frequency_string=$(get_frequency_string "$frequency")
 
     debug_print "DIRECTORY: $directory, frequency: $frequency, subreddit: $subreddit, VERBOSE: $VERBOSE"
@@ -223,7 +224,7 @@ download_images(){
 
     for url in $urls; do
         image_index=$((image_index+1))
-        $VERBOSE || progress_print "$image_index" "$number_images" "$PROGRESS_BAR_WIDTH"
+        $VERBOSE || progress_print "$image_index" "$number_images"
         filename=$(basename "$url")
         filename_abs="$dl_folder_abs/$filename"
         if [ ! -f "$filename_abs" ]; then
