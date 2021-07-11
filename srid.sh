@@ -180,7 +180,7 @@ download_images(){
 
     for url in $urls; do
         image_index=$((image_index+1))
-        $VERBOSE || progress_print $image_index $number_images $PROGRESS_BAR_WIDTH
+        $VERBOSE || progress_print "$image_index" "$number_images" "$PROGRESS_BAR_WIDTH"
         filename=$(basename "$url")
         filename_abs="$dl_folder_abs/$filename"
         if [ ! -f "$filename_abs" ]; then
