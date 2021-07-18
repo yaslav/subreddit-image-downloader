@@ -222,13 +222,15 @@ download_images(){
     error_urls=""
 
     for url in $urls; do
+        url=$(printf '%s' "$url" | sed -e 's#//imgur#//i.imgur#g')
+        url=$(printf '%s' "$url" | sed -e 's#http://#//https://#g')
         image_index=$((image_index+1))
         $VERBOSE || progress_print "$image_index" "$number_images"
         filename=$(basename "$url")
         filename_abs="$dl_folder_abs/$filename"
         if [ ! -f "$filename_abs" ]; then
             debug_print "Downloading $filename from $url"
-            curl "$url" -s -o "$filename_abs"
+            curl -A "$FAKE_USER_AGENT" "$url" -s -o "$filename_abs"
             if file "$filename_abs" | grep empty > /dev/null; then
                 debug_print "Error downloading file $url"
                 rm "$filename_abs"
